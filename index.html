@@ -61,16 +61,24 @@ border-radius:10px;
 }
 
 table{
+
 width:100%;
 border-collapse:collapse;
 margin-top:15px;
 background:white;
+border-radius:12px;
+overflow:hidden;
+table-layout:fixed;
+
 }
 
 th,td{
-padding:10px;
+
+padding:12px 6px;
 text-align:center;
 border-bottom:1px solid #eee;
+font-size:16px;
+
 }
 
 th{
@@ -98,15 +106,19 @@ background:#f8f8f8;
 
 <div id="dealerDisplay"></div>
 
+<label>番數</label>
 <select id="fan"></select>
 
-<select id="type">
+<label>方式</label>
+<select id="type" onchange="updateTypeUI()">
 <option value="discard">出銃</option>
 <option value="self">自摸</option>
 </select>
 
+<label id="winnerLabel">贏家</label>
 <select id="winner"></select>
 
+<label id="loserLabel">出銃者</label>
 <select id="loser"></select>
 
 <button class="blue" onclick="play()">完成一局</button>
@@ -116,6 +128,17 @@ background:#f8f8f8;
 <canvas id="chart" height="200"></canvas>
 
 <table id="table">
+
+<colgroup>
+<col style="width:8%">
+<col style="width:8%">
+<col style="width:12%">
+<col style="width:12%">
+<col style="width:15%">
+<col style="width:15%">
+<col style="width:15%">
+<col style="width:15%">
+</colgroup>
 
 <tr>
 <th>局</th>
@@ -152,12 +175,12 @@ let dealer=0;
 let dealerCount=0;
 
 let total=[0,0,0,0];
-
 let history=[];
 
 const winds=["東風圈","南風圈","西風圈","北風圈"];
 
 function save(){
+
 localStorage.setItem("mahjong",JSON.stringify({
 dealer,
 dealerCount,
@@ -165,6 +188,7 @@ total,
 history,
 names:getNames()
 }));
+
 }
 
 function load(){
@@ -190,20 +214,20 @@ updateNames();
 history.forEach(addRow);
 
 updateTotal();
-
 drawChart();
-
 updateDealer();
 
 }
 
 function getNames(){
+
 return[
 p0.value,
 p1.value,
 p2.value,
 p3.value
 ];
+
 }
 
 function updateNames(){
@@ -212,9 +236,6 @@ let names=getNames();
 
 for(let i=0;i<4;i++)
 document.getElementById("n"+i).innerText=names[i];
-
-let winner=document.getElementById("winner");
-let loser=document.getElementById("loser");
 
 winner.innerHTML="";
 loser.innerHTML="";
@@ -234,29 +255,46 @@ dealerDisplay.innerText="當前莊家："+round+" ‧ "+getNames()[dealer];
 
 }
 
+function updateTypeUI(){
+
+let type=typeSelect.value;
+
+if(type=="self"){
+
+loser.style.display="none";
+loserLabel.style.display="none";
+
+}else{
+
+loser.style.display="block";
+loserLabel.style.display="block";
+
+}
+
+}
+
 function play(){
 
-let fan=parseInt(document.getElementById("fan").value);
-
-let type=document.getElementById("type").value;
-
-let winner=parseInt(document.getElementById("winner").value);
-
-let loser=parseInt(document.getElementById("loser").value);
+let fan=parseInt(fanSelect.value);
+let type=typeSelect.value;
+let winnerIndex=parseInt(winner.value);
+let loserIndex=parseInt(loser.value);
 
 let round=[0,0,0,0];
 
 if(type=="discard"){
 
-if(winner==loser){
+if(winnerIndex==loserIndex){
+
 alert("出銃者不可等於贏家");
 return;
+
 }
 
 let score=discardScore[fan];
 
-round[winner]+=score;
-round[loser]-=score;
+round[winnerIndex]+=score;
+round[loserIndex]-=score;
 
 }else{
 
@@ -264,7 +302,7 @@ let score=selfScore[fan]/3;
 
 for(let i=0;i<4;i++){
 
-if(i==winner)
+if(i==winnerIndex)
 round[i]+=score*3;
 else
 round[i]-=score;
@@ -276,28 +314,26 @@ round[i]-=score;
 for(let i=0;i<4;i++)
 total[i]+=round[i];
 
-history.push({fan,type,winner,loser,round});
+history.push({fan,type,winner: winnerIndex,round});
 
-addRow({fan,type,winner,loser,round});
+addRow({fan,type,winner: winnerIndex,round});
 
 updateTotal();
-
 drawChart();
 
-if(winner!=dealer){
+if(winnerIndex!=dealer){
+
 dealer=(dealer+1)%4;
 dealerCount++;
+
 }
 
 updateDealer();
-
 save();
 
 }
 
 function addRow(data){
-
-let table=document.getElementById("table");
 
 let row=table.insertRow(table.rows.length-1);
 
@@ -313,7 +349,7 @@ row.insertCell(4+i).innerText=data.round[i];
 
 function updateTotal(){
 
-let row=document.getElementById("totalRow");
+let row=totalRow;
 
 for(let i=0;i<4;i++)
 row.cells[i+1].innerText=total[i];
@@ -322,7 +358,7 @@ row.cells[i+1].innerText=total[i];
 
 function drawChart(){
 
-let ctx=document.getElementById("chart").getContext("2d");
+let ctx=chart.getContext("2d");
 
 ctx.clearRect(0,0,500,200);
 
@@ -359,12 +395,11 @@ location.reload();
 }
 
 for(let i=3;i<=13;i++)
-fan.add(new Option(i,i));
+fanSelect.add(new Option(i,i));
 
 updateNames();
-
 updateDealer();
-
+updateTypeUI();
 load();
 
 </script>
