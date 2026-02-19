@@ -1,298 +1,348 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
 <title>香港麻雀計分器（全重）</title>
 
 <style>
+
 body{
-font-family:-apple-system;
-background:#f2f2f2;
-padding:10px;
+font-family:-apple-system,BlinkMacSystemFont;
+margin:20px;
+font-size:17px;
+background:#f2f2f7;
 }
 
-.container{
-background:white;
-padding:15px;
-border-radius:15px;
-max-width:700px;
-margin:auto;
+h2{
+text-align:center;
 }
 
-input,select,button{
+label{
+font-weight:600;
+display:block;
+margin-top:10px;
+}
+
+input, select, button{
+
 width:100%;
+height:48px;
 padding:10px;
-margin:5px 0;
-font-size:18px;
-border-radius:8px;
+font-size:17px;
+border-radius:10px;
+border:1px solid #ccc;
+box-sizing:border-box;
+background:white;
+margin-top:5px;
+margin-bottom:10px;
+
 }
 
 button{
-background:#007aff;
-color:white;
 border:none;
+color:white;
+font-weight:600;
 }
 
-.reset{
-background:red;
-}
+.blue{background:#007aff;}
+.red{background:#ff3b30;}
 
-.dealer{
+#dealerDisplay{
+font-weight:600;
 color:#007aff;
-font-weight:bold;
 margin:10px 0;
+}
+
+canvas{
+margin-top:20px;
+background:white;
+border-radius:10px;
 }
 
 table{
 width:100%;
 border-collapse:collapse;
-margin-top:10px;
+margin-top:15px;
+background:white;
 }
 
 th,td{
-border:1px solid #ccc;
-padding:6px;
+padding:10px;
 text-align:center;
+border-bottom:1px solid #eee;
 }
 
-.totalRow{
-background:#eee;
-font-weight:bold;
+th{
+background:#f8f8f8;
 }
 
-canvas{
-margin-top:15px;
-border:1px solid #ccc;
-}
 </style>
-
 </head>
 
 <body>
 
-<div class="container">
-
 <h2>香港麻雀計分器（全重）</h2>
 
 <label>玩家1</label>
-<input id="name0" value="A">
+<input id="p0" value="A">
 
 <label>玩家2</label>
-<input id="name1" value="B">
+<input id="p1" value="B">
 
 <label>玩家3</label>
-<input id="name2" value="C">
+<input id="p2" value="C">
 
 <label>玩家4</label>
-<input id="name3" value="D">
+<input id="p3" value="D">
 
-<div class="dealer" id="dealerDisplay"></div>
+<div id="dealerDisplay"></div>
 
 <select id="fan"></select>
 
 <select id="type">
-<option value="出銃">出銃</option>
-<option value="自摸">自摸</option>
+<option value="discard">出銃</option>
+<option value="self">自摸</option>
 </select>
 
 <select id="winner"></select>
 
 <select id="loser"></select>
 
-<button onclick="play()">完成一局</button>
+<button class="blue" onclick="play()">完成一局</button>
 
-<button class="reset" onclick="resetGame()">重置牌局</button>
+<button class="red" onclick="resetGame()">重置牌局</button>
 
-<canvas id="chart" width="600" height="200"></canvas>
+<canvas id="chart" height="200"></canvas>
 
-<table id="table"></table>
+<table id="table">
 
-</div>
+<tr>
+<th>局</th>
+<th>番</th>
+<th>方式</th>
+<th>贏家</th>
+<th id="n0">A</th>
+<th id="n1">B</th>
+<th id="n2">C</th>
+<th id="n3">D</th>
+</tr>
+
+<tr id="totalRow">
+<td colspan="4"><b>總計</b></td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+</tr>
+
+</table>
 
 <script>
 
-// 計分表（完全按你張紙）
-const SCORE={
-3:{d:16,t:24},
-4:{d:24,t:36},
-5:{d:32,t:48},
-6:{d:48,t:72},
-7:{d:64,t:96},
-8:{d:96,t:144},
-9:{d:128,t:192},
-10:{d:192,t:288},
-11:{d:256,t:384},
-12:{d:384,t:576},
-13:{d:512,t:768}
+const discardScore={
+3:16,4:24,5:32,6:48,7:64,8:96,9:128,10:192,11:256,12:384,13:512
 };
 
-let history=[];
-let total=[0,0,0,0];
-let dealer=0;
+const selfScore={
+3:24,4:36,5:48,6:72,7:96,8:144,9:192,10:288,11:384,12:576,13:768
+};
 
-// 初始化番數
-for(let i=3;i<=13;i++){
-fan.innerHTML+=`<option>${i}</option>`;
+let dealer=0;
+let dealerCount=0;
+
+let total=[0,0,0,0];
+
+let history=[];
+
+const winds=["東風圈","南風圈","西風圈","北風圈"];
+
+function save(){
+localStorage.setItem("mahjong",JSON.stringify({
+dealer,
+dealerCount,
+total,
+history,
+names:getNames()
+}));
+}
+
+function load(){
+
+let data=localStorage.getItem("mahjong");
+
+if(!data)return;
+
+data=JSON.parse(data);
+
+dealer=data.dealer;
+dealerCount=data.dealerCount;
+total=data.total;
+history=data.history;
+
+let names=data.names;
+
+for(let i=0;i<4;i++)
+document.getElementById("p"+i).value=names[i];
+
+updateNames();
+
+history.forEach(addRow);
+
+updateTotal();
+
+drawChart();
+
+updateDealer();
+
 }
 
 function getNames(){
 return[
-name0.value,
-name1.value,
-name2.value,
-name3.value
+p0.value,
+p1.value,
+p2.value,
+p3.value
 ];
 }
 
-function updateSelectors(){
+function updateNames(){
 
-const names=getNames();
+let names=getNames();
 
-let w=winner.value;
-let l=loser.value;
+for(let i=0;i<4;i++)
+document.getElementById("n"+i).innerText=names[i];
+
+let winner=document.getElementById("winner");
+let loser=document.getElementById("loser");
 
 winner.innerHTML="";
 loser.innerHTML="";
 
 names.forEach((n,i)=>{
-winner.innerHTML+=`<option value="${i}">${n}</option>`;
-loser.innerHTML+=`<option value="${i}">${n}</option>`;
+winner.add(new Option(n,i));
+loser.add(new Option(n,i));
 });
 
-winner.value=w||0;
-loser.value=l||0;
+}
 
-dealerDisplay.innerText="當前莊家："+names[dealer];
+function updateDealer(){
+
+let round=winds[Math.floor(dealerCount/4)%4];
+
+dealerDisplay.innerText="當前莊家："+round+" ‧ "+getNames()[dealer];
 
 }
 
 function play(){
 
-let f=parseInt(fan.value);
-let t=type.value;
-let w=parseInt(winner.value);
-let l=parseInt(loser.value);
+let fan=parseInt(document.getElementById("fan").value);
+
+let type=document.getElementById("type").value;
+
+let winner=parseInt(document.getElementById("winner").value);
+
+let loser=parseInt(document.getElementById("loser").value);
 
 let round=[0,0,0,0];
 
-if(t==="出銃"){
+if(type=="discard"){
 
-if(w===l){
-alert("出銃者不能與贏家相同");
+if(winner==loser){
+alert("出銃者不可等於贏家");
 return;
 }
 
-let amt=SCORE[f].d;
+let score=discardScore[fan];
 
-round[w]+=amt;
-round[l]-=amt;
+round[winner]+=score;
+round[loser]-=score;
 
 }else{
 
-let amt=SCORE[f].t;
-let pay=amt/3;
-
-round[w]+=amt;
+let score=selfScore[fan]/3;
 
 for(let i=0;i<4;i++){
-if(i!==w) round[i]-=pay;
+
+if(i==winner)
+round[i]+=score*3;
+else
+round[i]-=score;
+
 }
 
 }
 
-history.push({
-fan:f,
-type:t,
-winner:w,
-round:round
-});
-
-for(let i=0;i<4;i++){
+for(let i=0;i<4;i++)
 total[i]+=round[i];
-}
 
-if(w!==dealer){
-dealer=(dealer+1)%4;
-}
+history.push({fan,type,winner,loser,round});
 
-save();
-render();
+addRow({fan,type,winner,loser,round});
 
-}
-
-function render(){
-
-updateSelectors();
-
-let names=getNames();
-
-let html="<tr><th>局</th><th>番</th><th>方式</th><th>贏家</th>";
-
-names.forEach(n=>html+=`<th>${n}</th>`);
-
-html+="</tr>";
-
-history.forEach((h,i)=>{
-
-html+=`<tr>
-<td>${i+1}</td>
-<td>${h.fan}</td>
-<td>${h.type}</td>
-<td>${names[h.winner]}</td>
-`;
-
-h.round.forEach(v=>{
-html+=`<td>${v}</td>`;
-});
-
-html+="</tr>";
-
-});
-
-html+=`<tr class="totalRow">
-<td colspan="4">總計</td>
-<td>${total[0]}</td>
-<td>${total[1]}</td>
-<td>${total[2]}</td>
-<td>${total[3]}</td>
-</tr>`;
-
-table.innerHTML=html;
+updateTotal();
 
 drawChart();
+
+if(winner!=dealer){
+dealer=(dealer+1)%4;
+dealerCount++;
+}
+
+updateDealer();
+
+save();
+
+}
+
+function addRow(data){
+
+let table=document.getElementById("table");
+
+let row=table.insertRow(table.rows.length-1);
+
+row.insertCell(0).innerText=history.length;
+row.insertCell(1).innerText=data.fan;
+row.insertCell(2).innerText=data.type=="self"?"自摸":"出銃";
+row.insertCell(3).innerText=getNames()[data.winner];
+
+for(let i=0;i<4;i++)
+row.insertCell(4+i).innerText=data.round[i];
+
+}
+
+function updateTotal(){
+
+let row=document.getElementById("totalRow");
+
+for(let i=0;i<4;i++)
+row.cells[i+1].innerText=total[i];
 
 }
 
 function drawChart(){
 
-let canvas=document.getElementById("chart");
-let ctx=canvas.getContext("2d");
+let ctx=document.getElementById("chart").getContext("2d");
 
-ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.clearRect(0,0,500,200);
 
 let names=getNames();
 
-let max=Math.max(...total.map(x=>Math.abs(x)),10);
+let max=Math.max(...total.map(Math.abs),1);
+
+let colors=["red","blue","green","orange"];
 
 for(let i=0;i<4;i++){
 
-let value=total[i];
+let h=total[i]/max*80;
 
-let height=(value/max)*80;
+ctx.fillStyle=colors[i];
 
-ctx.fillStyle=["red","blue","green","orange"][i];
+ctx.fillRect(50+i*80,100-h,40,h);
 
-ctx.fillRect(
-50+i*130,
-100-height,
-50,
-height
-);
+ctx.fillText(names[i],50+i*80,120);
 
-ctx.fillStyle="black";
-ctx.fillText(names[i],50+i*130,130);
-ctx.fillText(value,50+i*130,90-height);
+ctx.fillText(total[i],50+i*80,90-h);
 
 }
 
@@ -300,39 +350,22 @@ ctx.fillText(value,50+i*130,90-height);
 
 function resetGame(){
 
-if(!confirm("確定重置？")) return;
+if(!confirm("確定重置？"))return;
 
-history=[];
-total=[0,0,0,0];
-dealer=0;
+localStorage.removeItem("mahjong");
 
-save();
-render();
+location.reload();
 
 }
 
-function save(){
+for(let i=3;i<=13;i++)
+fan.add(new Option(i,i));
 
-localStorage.setItem("mj_history",JSON.stringify(history));
-localStorage.setItem("mj_total",JSON.stringify(total));
-localStorage.setItem("mj_dealer",dealer);
+updateNames();
 
-}
-
-function load(){
-
-let h=localStorage.getItem("mj_history");
-let t=localStorage.getItem("mj_total");
-let d=localStorage.getItem("mj_dealer");
-
-if(h) history=JSON.parse(h);
-if(t) total=JSON.parse(t);
-if(d) dealer=parseInt(d);
-
-}
+updateDealer();
 
 load();
-render();
 
 </script>
 
