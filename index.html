@@ -82,16 +82,16 @@ background:#f8f8f8;
 <h2>香港麻雀計分器（全重）</h2>
 
 <label>玩家1</label>
-<input id="p0" value="A">
+<input id="p0" value="A" onchange="updateNamesAll()">
 
 <label>玩家2</label>
-<input id="p1" value="B">
+<input id="p1" value="B" onchange="updateNamesAll()">
 
 <label>玩家3</label>
-<input id="p2" value="C">
+<input id="p2" value="C" onchange="updateNamesAll()">
 
 <label>玩家4</label>
-<input id="p3" value="D">
+<input id="p3" value="D" onchange="updateNamesAll()">
 
 <div id="dealerDisplay"></div>
 
@@ -156,58 +156,80 @@ let history=[];
 
 const winds=["東風圈","南風圈","西風圈","北風圈"];
 
-function initFan(){
-for(let i=3;i<=13;i++){
-let opt=document.createElement("option");
-opt.value=i;
-opt.text=i+" 番";
-fan.appendChild(opt);
-}
+function getNames(){
+return[p0.value,p1.value,p2.value,p3.value];
 }
 
-function updateNames(){
+function updateNamesAll(){
 
 let names=getNames();
 
-winner.innerHTML="";
-loser.innerHTML="";
+let winnerSelect=winner;
+let loserSelect=loser;
+
+let wVal=winnerSelect.value;
+let lVal=loserSelect.value;
+
+winnerSelect.innerHTML="";
+loserSelect.innerHTML="";
 
 for(let i=0;i<4;i++){
 
 let opt=document.createElement("option");
 opt.value=i;
 opt.text=names[i];
+winnerSelect.appendChild(opt);
 
-winner.appendChild(opt.cloneNode(true));
-loser.appendChild(opt);
+let opt2=document.createElement("option");
+opt2.value=i;
+opt2.text=names[i];
+loserSelect.appendChild(opt2);
 
 document.getElementById("n"+i).innerText=names[i];
 
 }
 
-}
+if(wVal) winnerSelect.value=wVal;
+if(lVal) loserSelect.value=lVal;
 
-function getNames(){
-return[p0.value,p1.value,p2.value,p3.value];
+updateDealer();
+drawChart();
+
 }
 
 function updateDealer(){
 
 let round=winds[Math.floor(dealerCount/4)%4];
 
-dealerDisplay.innerText=
-"當前莊家："+round+" ‧ "+getNames()[dealer];
+dealerDisplay.innerText="當前莊家："+round+" ‧ "+getNames()[dealer];
 
 }
 
 function updateTypeUI(){
 
 if(type.value=="self"){
+
 loser.style.display="none";
 loserLabel.style.display="none";
+
 }else{
+
 loser.style.display="block";
 loserLabel.style.display="block";
+
+}
+
+}
+
+function initFan(){
+
+for(let i=3;i<=13;i++){
+
+let opt=document.createElement("option");
+opt.value=i;
+opt.text=i+" 番";
+fan.appendChild(opt);
+
 }
 
 }
@@ -229,6 +251,7 @@ return;
 }
 
 let score=discardScore[fanVal];
+
 round[w]+=score;
 round[l]-=score;
 
@@ -237,8 +260,10 @@ round[l]-=score;
 let score=selfScore[fanVal]/3;
 
 for(let i=0;i<4;i++){
+
 if(i==w) round[i]+=score*3;
 else round[i]-=score;
+
 }
 
 }
@@ -277,8 +302,10 @@ row.insertCell(4+i).innerText=round[i];
 }
 
 function updateTotal(){
+
 for(let i=0;i<4;i++)
 totalRow.cells[i+1].innerText=total[i];
+
 }
 
 function undo(){
@@ -330,22 +357,18 @@ ctx.clearRect(0,0,chart.width,chart.height);
 let names=getNames();
 let max=Math.max(...total.map(Math.abs),1);
 
-let colors=["red","blue","green","orange"];
-
 let spacing=chart.width/5;
+let colors=["red","blue","green","orange"];
 
 for(let i=0;i<4;i++){
 
 let x=spacing*(i+1);
-
 let h=(total[i]/max)*80;
 
 ctx.fillStyle=colors[i];
-
 ctx.fillRect(x-20,120-h,40,h);
 
 ctx.fillText(names[i],x-20,140);
-
 ctx.fillText(total[i],x-20,110-h);
 
 }
@@ -357,7 +380,7 @@ location.reload();
 }
 
 initFan();
-updateNames();
+updateNamesAll();
 updateDealer();
 updateTypeUI();
 drawChart();
