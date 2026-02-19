@@ -2,7 +2,6 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <title>香港麻雀計分器（全重）</title>
 
 <style>
@@ -14,10 +13,6 @@ font-size:17px;
 background:#f2f2f7;
 }
 
-h2{
-text-align:center;
-}
-
 label{
 font-weight:600;
 display:block;
@@ -25,7 +20,6 @@ margin-top:10px;
 }
 
 input, select, button{
-
 width:100%;
 height:48px;
 padding:10px;
@@ -34,9 +28,7 @@ border-radius:10px;
 border:1px solid #ccc;
 box-sizing:border-box;
 background:white;
-margin-top:5px;
 margin-bottom:10px;
-
 }
 
 button{
@@ -57,28 +49,23 @@ margin:10px 0;
 canvas{
 margin-top:20px;
 background:white;
-border-radius:10px;
+border-radius:12px;
+width:100%;
+height:220px;
 }
 
 table{
-
 width:100%;
 border-collapse:collapse;
 margin-top:15px;
 background:white;
-border-radius:12px;
-overflow:hidden;
 table-layout:fixed;
-
 }
 
 th,td{
-
-padding:12px 6px;
+padding:10px;
 text-align:center;
 border-bottom:1px solid #eee;
-font-size:16px;
-
 }
 
 th{
@@ -125,20 +112,9 @@ background:#f8f8f8;
 
 <button class="red" onclick="resetGame()">重置牌局</button>
 
-<canvas id="chart" height="200"></canvas>
+<canvas id="chart"></canvas>
 
 <table id="table">
-
-<colgroup>
-<col style="width:8%">
-<col style="width:8%">
-<col style="width:12%">
-<col style="width:12%">
-<col style="width:15%">
-<col style="width:15%">
-<col style="width:15%">
-<col style="width:15%">
-</colgroup>
 
 <tr>
 <th>局</th>
@@ -179,43 +155,43 @@ let history=[];
 
 const winds=["東風圈","南風圈","西風圈","北風圈"];
 
-function save(){
+function initFan(){
 
-localStorage.setItem("mahjong",JSON.stringify({
-dealer,
-dealerCount,
-total,
-history,
-names:getNames()
-}));
+let fan=document.getElementById("fan");
+
+fan.innerHTML="";
+
+for(let i=3;i<=13;i++){
+
+let opt=document.createElement("option");
+opt.value=i;
+opt.text=i+" 番";
+
+fan.appendChild(opt);
 
 }
 
-function load(){
+}
 
-let data=localStorage.getItem("mahjong");
+function updateNames(){
 
-if(!data)return;
+let names=getNames();
 
-data=JSON.parse(data);
+winner.innerHTML="";
+loser.innerHTML="";
 
-dealer=data.dealer;
-dealerCount=data.dealerCount;
-total=data.total;
-history=data.history;
+for(let i=0;i<4;i++){
 
-let names=data.names;
+let opt=document.createElement("option");
+opt.value=i;
+opt.text=names[i];
 
-for(let i=0;i<4;i++)
-document.getElementById("p"+i).value=names[i];
+winner.appendChild(opt.cloneNode(true));
+loser.appendChild(opt);
 
-updateNames();
+document.getElementById("n"+i).innerText=names[i];
 
-history.forEach(addRow);
-
-updateTotal();
-drawChart();
-updateDealer();
+}
 
 }
 
@@ -230,34 +206,18 @@ p3.value
 
 }
 
-function updateNames(){
-
-let names=getNames();
-
-for(let i=0;i<4;i++)
-document.getElementById("n"+i).innerText=names[i];
-
-winner.innerHTML="";
-loser.innerHTML="";
-
-names.forEach((n,i)=>{
-winner.add(new Option(n,i));
-loser.add(new Option(n,i));
-});
-
-}
-
 function updateDealer(){
 
 let round=winds[Math.floor(dealerCount/4)%4];
 
-dealerDisplay.innerText="當前莊家："+round+" ‧ "+getNames()[dealer];
+dealerDisplay.innerText=
+"當前莊家："+round+" ‧ "+getNames()[dealer];
 
 }
 
 function updateTypeUI(){
 
-let type=typeSelect.value;
+let type=document.getElementById("type").value;
 
 if(type=="self"){
 
@@ -275,9 +235,12 @@ loserLabel.style.display="block";
 
 function play(){
 
-let fan=parseInt(fanSelect.value);
-let type=typeSelect.value;
+let fan=parseInt(document.getElementById("fan").value);
+
+let type=document.getElementById("type").value;
+
 let winnerIndex=parseInt(winner.value);
+
 let loserIndex=parseInt(loser.value);
 
 let round=[0,0,0,0];
@@ -314,9 +277,12 @@ round[i]-=score;
 for(let i=0;i<4;i++)
 total[i]+=round[i];
 
-history.push({fan,type,winner: winnerIndex,round});
-
-addRow({fan,type,winner: winnerIndex,round});
+addRow({
+fan,
+type,
+winner:winnerIndex,
+round
+});
 
 updateTotal();
 drawChart();
@@ -329,7 +295,6 @@ dealerCount++;
 }
 
 updateDealer();
-save();
 
 }
 
@@ -337,13 +302,20 @@ function addRow(data){
 
 let row=table.insertRow(table.rows.length-1);
 
-row.insertCell(0).innerText=history.length;
+row.insertCell(0).innerText=history.length+1;
+
 row.insertCell(1).innerText=data.fan;
-row.insertCell(2).innerText=data.type=="self"?"自摸":"出銃";
-row.insertCell(3).innerText=getNames()[data.winner];
+
+row.insertCell(2).innerText=
+data.type=="self"?"自摸":"出銃";
+
+row.insertCell(3).innerText=
+getNames()[data.winner];
 
 for(let i=0;i<4;i++)
 row.insertCell(4+i).innerText=data.round[i];
+
+history.push(data);
 
 }
 
@@ -358,27 +330,33 @@ row.cells[i+1].innerText=total[i];
 
 function drawChart(){
 
-let ctx=chart.getContext("2d");
+let canvas=document.getElementById("chart");
 
-ctx.clearRect(0,0,500,200);
+let ctx=canvas.getContext("2d");
+
+canvas.width=canvas.offsetWidth;
+
+canvas.height=220;
+
+ctx.clearRect(0,0,canvas.width,canvas.height);
 
 let names=getNames();
 
-let max=Math.max(...total.map(Math.abs),1);
+let max=Math.max(...total.map(x=>Math.abs(x)),1);
 
 let colors=["red","blue","green","orange"];
 
 for(let i=0;i<4;i++){
 
-let h=total[i]/max*80;
+let h=(total[i]/max)*80;
 
 ctx.fillStyle=colors[i];
 
-ctx.fillRect(50+i*80,100-h,40,h);
+ctx.fillRect(40+i*80,120-h,40,h);
 
-ctx.fillText(names[i],50+i*80,120);
+ctx.fillText(names[i],40+i*80,140);
 
-ctx.fillText(total[i],50+i*80,90-h);
+ctx.fillText(total[i],40+i*80,110-h);
 
 }
 
@@ -386,21 +364,16 @@ ctx.fillText(total[i],50+i*80,90-h);
 
 function resetGame(){
 
-if(!confirm("確定重置？"))return;
-
-localStorage.removeItem("mahjong");
-
+if(confirm("確定重置？"))
 location.reload();
 
 }
 
-for(let i=3;i<=13;i++)
-fanSelect.add(new Option(i,i));
-
+initFan();
 updateNames();
 updateDealer();
 updateTypeUI();
-load();
+drawChart();
 
 </script>
 
