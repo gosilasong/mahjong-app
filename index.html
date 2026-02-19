@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>香港麻雀計分器 App完整版 修正Reset</title>
+
+<style>
+body{font-family:-apple-system;background:#f2f2f2;margin:0;padding:10px;text-align:center;}
+.container{background:white;border-radius:15px;padding:15px;}
+input,select,button{width:100%;font-size:18px;padding:12px;margin:5px 0;border-radius:8px;}
+.reset{background:#ff3b30;color:white;font-weight:bold;}
+.dealer{font-size:18px;font-weight:bold;color:#007aff;margin-top:5px;}
+canvas{margin-top:15px;background:white;border:1px solid #ccc;}
+table{width:100%;margin-top:10px;border-collapse:collapse;}
+th,td{border:1px solid #ccc;padding:5px;font-size:14px;}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>香港麻雀計分器</h2>
+
+<input id="name0" placeholder="玩家1名稱">
+<input id="name1" placeholder="玩家2名稱">
+<input id="name2" placeholder="玩家3名稱">
+<input id="name3" placeholder="玩家4名稱">
+
+<div class="dealer" id="dealerDisplay"></div>
+
+<select id="fan"></select>
+
+<select id="type" onchange="toggleLoser()">
+<option value="出銃">出銃</option>
+<option value="自摸">自摸</option>
+</select>
+
+<select id="winner"></select>
+
+<div id="loserDiv">
+<select id="loser"></select>
+</div>
+
+<button onclick="play()">完成一局</button>
+
+<button class="reset" onclick="resetGame()">重置牌局</button>
+
+<canvas id="chart" width="320" height="220"></canvas>
+
+<table id="historyTable"></table>
+
+</div>
+
+<script>
+
+const COLORS=["#ff3b30","#007aff","#34c759","#ff9500"];
+
+const base={3:8,4:12,5:16,6:24,7:32,8:48,9:64,10:96,11:128,12:192,13:256};
+
+let total=[0,0,0,0];
+let dealer=0;
+let history=[];
+
+function names(){
+return [
+name0.value||"玩家1",
+name1.value||"玩家2",
+name2.value||"玩家3",
+name3.value||"玩家4"
+];
+}
+
+function save(){
+localStorage.setItem("mj_total",JSON.stringify(total));
+localStorage.setItem("mj_names",JSON.stringify(names()));
+localStorage.setItem("mj_dealer",dealer.toString());
+localStorage.setItem("mj_history",JSON.stringify(history));
+}
+
+function load(){
+
+let t=localStorage.getItem("mj_total");
+if(t) total=JSON.parse(t);
+
+let n=localStorage.getItem("mj_names");
+if(n){
+let arr=JSON.parse(n);
+[name0.value,name1.value,name2.value,name3.value]=arr;
+}
+
+let d=localStorage.getItem("mj_dealer");
+if(d!==null) dealer=parseInt(d);
+
+let h=localStorage.getItem("mj_history");
+if(h) history=JSON.parse(h);
+
+}
+
+function toggleLoser(){
+loserDiv.style.display=(type.value==="自摸")?"none":"block";
+}
+
+function updateUI(){
+
+let n=names();
+
+winner.innerHTML="";
+loser.innerHTML="";
+
+n.forEach((name,i)=>{
+winner.innerHTML+=`<option value=${i}>${name}</option>`;
+loser.innerHTML+=`<option value=${i}>${name}</option>`;
+});
+
+dealerDisplay.innerText="當前莊家："+n[dealer];
+
+drawChart();
+drawHistory();
+}
+
+function play(){
+
+let f=parseInt(fan.value);
+let w=parseInt(winner.value);
+let l=parseInt(loser.value);
+let b=base[f];
+
+let round=[0,0,0,0];
+
+if(type.value==="出銃"){
+
+if(w===l){
+alert("出銃不能同一人");
+return;
+}
+
+round[w]+=b*2;
+round[l]-=b*2;
+
+}else{
+
+for(let i=0;i<4;i++){
+if(i!==w){
+round[i]-=b;
+round[w]+=b;
+}
+}
+
+}
+
+for(let i=0;i<4;i++){
+total[i]+=round[i];
+}
+
+history.push({
+fan:f,
+type:type.value,
+winner:w,
+total:[...total]
+});
+
+if(w!==dealer){
+dealer=(dealer+1)%4;
+}
+
+save();
+updateUI();
+}
+
+function resetGame(){
+
+if(!confirm("確定重置牌局？")) return;
+
+// 強制清除所有 key
+localStorage.removeItem("mj_total");
+localStorage.removeItem("mj_names");
+localStorage.removeItem("mj_dealer");
+localStorage.removeItem("mj_history");
+
+// 重設記憶體資料
+total=[0,0,0,0];
+dealer=0;
+history=[];
+
+// 重設 UI
+updateUI();
+
+// 強制重新儲存乾淨狀態
+save();
+
+// 強制 redraw
+drawChart();
+drawHistory();
+
+alert("牌局已成功重置");
+
+}
+
+function drawChart(){
+
+let ctx=chart.getContext("2d");
+ctx.clearRect(0,0,chart.width,chart.height);
+
+let max=Math.max(...total.map(x=>Math.abs(x)),10);
+
+names().forEach((n,i)=>{
+
+let v=total[i];
+let h=(v/max)*80;
+
+ctx.fillStyle=COLORS[i];
+ctx.fillRect(30+i*70,120-h,40,h);
+
+ctx.fillStyle="black";
+ctx.fillText(n,30+i*70,150);
+ctx.fillText(v,30+i*70,110-h);
+
+});
+
+}
+
+function drawHistory(){
+
+let n=names();
+
+let html="<tr><th>局</th><th>番</th><th>方式</th><th>贏家</th>";
+
+n.forEach(name=>html+=`<th>${name}</th>`);
+
+html+="</tr>";
+
+history.forEach((h,i)=>{
+
+html+=`<tr>`;
+html+=`<td>${i+1}</td>`;
+html+=`<td>${h.fan}</td>`;
+html+=`<td>${h.type}</td>`;
+html+=`<td>${n[h.winner]}</td>`;
+
+h.total.forEach(v=>html+=`<td>${v}</td>`);
+
+html+="</tr>";
+
+});
+
+historyTable.innerHTML=html;
+
+}
+
+function init(){
+
+for(let i=3;i<=13;i++){
+fan.innerHTML+=`<option>${i}</option>`;
+}
+
+load();
+updateUI();
+toggleLoser();
+
+}
+
+init();
+
+</script>
+
+</body>
+</html>
