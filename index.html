@@ -9,29 +9,23 @@
 body{
 font-family:-apple-system;
 background:#f2f2f2;
-margin:0;
 padding:10px;
 }
 
 .container{
 background:white;
-border-radius:16px;
 padding:15px;
+border-radius:15px;
 max-width:700px;
 margin:auto;
 }
 
-h2{
-text-align:center;
-}
-
 input,select,button{
 width:100%;
-font-size:18px;
 padding:10px;
 margin:5px 0;
+font-size:18px;
 border-radius:8px;
-border:1px solid #ccc;
 }
 
 button{
@@ -45,8 +39,8 @@ background:red;
 }
 
 .dealer{
-font-weight:bold;
 color:#007aff;
+font-weight:bold;
 margin:10px 0;
 }
 
@@ -63,14 +57,16 @@ text-align:center;
 }
 
 .totalRow{
-font-weight:bold;
 background:#eee;
+font-weight:bold;
 }
 
 canvas{
 margin-top:15px;
+border:1px solid #ccc;
 }
 </style>
+
 </head>
 
 <body>
@@ -108,16 +104,15 @@ margin-top:15px;
 
 <button class="reset" onclick="resetGame()">重置牌局</button>
 
-<canvas id="chart" height="150"></canvas>
+<canvas id="chart" width="600" height="200"></canvas>
 
 <table id="table"></table>
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script>
 
+// 計分表（完全按你張紙）
 const SCORE={
 3:{d:16,t:24},
 4:{d:24,t:36},
@@ -135,7 +130,11 @@ const SCORE={
 let history=[];
 let total=[0,0,0,0];
 let dealer=0;
-let chart;
+
+// 初始化番數
+for(let i=3;i<=13;i++){
+fan.innerHTML+=`<option>${i}</option>`;
+}
 
 function getNames(){
 return[
@@ -165,14 +164,15 @@ winner.value=w||0;
 loser.value=l||0;
 
 dealerDisplay.innerText="當前莊家："+names[dealer];
+
 }
 
 function play(){
 
-const f=parseInt(fan.value);
-const t=type.value;
-const w=parseInt(winner.value);
-const l=parseInt(loser.value);
+let f=parseInt(fan.value);
+let t=type.value;
+let w=parseInt(winner.value);
+let l=parseInt(loser.value);
 
 let round=[0,0,0,0];
 
@@ -198,6 +198,7 @@ round[w]+=amt;
 for(let i=0;i<4;i++){
 if(i!==w) round[i]-=pay;
 }
+
 }
 
 history.push({
@@ -215,8 +216,8 @@ if(w!==dealer){
 dealer=(dealer+1)%4;
 }
 
-render();
 save();
+render();
 
 }
 
@@ -224,7 +225,7 @@ function render(){
 
 updateSelectors();
 
-const names=getNames();
+let names=getNames();
 
 let html="<tr><th>局</th><th>番</th><th>方式</th><th>贏家</th>";
 
@@ -259,31 +260,41 @@ html+=`<tr class="totalRow">
 
 table.innerHTML=html;
 
-updateChart();
+drawChart();
 
 }
 
-function updateChart(){
+function drawChart(){
 
-const names=getNames();
+let canvas=document.getElementById("chart");
+let ctx=canvas.getContext("2d");
 
-if(chart) chart.destroy();
+ctx.clearRect(0,0,canvas.width,canvas.height);
 
-chart=new Chart(chartCanvas.getContext("2d"),{
-type:"bar",
-data:{
-labels:names,
-datasets:[{
-data:total,
-backgroundColor:[
-"red","blue","green","orange"
-]
-}]
-},
-options:{
-plugins:{legend:{display:false}}
+let names=getNames();
+
+let max=Math.max(...total.map(x=>Math.abs(x)),10);
+
+for(let i=0;i<4;i++){
+
+let value=total[i];
+
+let height=(value/max)*80;
+
+ctx.fillStyle=["red","blue","green","orange"][i];
+
+ctx.fillRect(
+50+i*130,
+100-height,
+50,
+height
+);
+
+ctx.fillStyle="black";
+ctx.fillText(names[i],50+i*130,130);
+ctx.fillText(value,50+i*130,90-height);
+
 }
-});
 
 }
 
@@ -295,8 +306,8 @@ history=[];
 total=[0,0,0,0];
 dealer=0;
 
-render();
 save();
+render();
 
 }
 
@@ -320,19 +331,8 @@ if(d) dealer=parseInt(d);
 
 }
 
-function init(){
-
-for(let i=3;i<=13;i++){
-fan.innerHTML+=`<option>${i}</option>`;
-}
-
 load();
-updateSelectors();
 render();
-
-}
-
-init();
 
 </script>
 
